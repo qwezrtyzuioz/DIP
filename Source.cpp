@@ -17,6 +17,8 @@ public:
 	bool loaded;
 	void imread(string in_name);
 	void imwrie(string out_name);
+	void bilinear(img& store, string mode);
+	void quant(int level);
 
 private:
 	char
@@ -49,13 +51,11 @@ private:
 
 img::img()
 	:loaded(false){}
-
 img::img(string in_name)
 	: loaded(false)
 {
 	imread(in_name);
 }
-
 img::~img()
 {
 	if (loaded)
@@ -147,15 +147,51 @@ void img::imwrie(string out_name)
 	fout.close();
 }
 
+void img::bilinear(img& store, string mode)
+{
+	int	step, num_pix, count;
+	
+	
+
+	//these parameters in resized image the same as origin one.
+	store.id[0] = id[0];
+	store.id[1] = id[1];
+	store.reserved = reserved;
+	store.offset = offset;
+	store.header_size = header_size;
+	store.planes = planes;
+	store.pix_bit = pix_bit;
+	store.compress = compress;
+	store.h_res = h_res;
+	store.v_res = v_res;
+	store.use_col = use_col;
+	store.imp_col = imp_col;
+
+	//these parameter in resized image change as size.
+	//store.data_size = (num_pix* pix_bit) / 4;
+	store.file_size = store.data_size + store.header_size;
+	store.loaded = true;
+	store.real_size = store.file_size;	
+	store.data = new char[data_size];
+
+}
+
+void img::quant(int level)
+{
+	for (int i = 0; i < data_size; ++i){
+		data[i] = data[i] >> level;
+		data[i] = data[i] << level;
+	}
+}
+
 int main()
 {
 	
-	img input;
+	img input, resize;
 
 	input.imread("input1.bmp");
-	input.imwrie("output1.bmp");
-
-
+	input.quant(5);
+	input.imwrie("output1_3.bmp");
 	
 
 

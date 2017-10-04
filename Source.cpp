@@ -17,13 +17,14 @@ public:
 	bool loaded;
 	void imread(string in_name);
 	void imwrie(string out_name);
-	void bilinear(img& store, string mode);
+	void bilinear(img& store, bool is_up);
 	void quant(int level);
 
 private:
 	char
 		id[2],				//	identifier
-		*data;				//	bmp data matrix
+		*data,				//	bmp data matrix
+		*palette;			//	palette
 
 	int
 		width,				//	width in pixel
@@ -40,8 +41,7 @@ private:
 		v_res,				//	vertical resolution
 		use_col,			//	used color
 		imp_col,			//	important colors
-		real_size,			//	real file size
-		*palette;			//	palette
+		real_size;			//	real file size
 
 	unsigned short int
 		planes,				//	planes of bitmap
@@ -69,7 +69,7 @@ void img::imread(string in_name)
 	fin.open(in_name, ios::in | ios::binary);
 
 	fin.seekg(0, fin.end);
-	real_size = fin.tellg();
+	real_size = (unsigned int)fin.tellg();
 	cout << "The size of image is: " << real_size << " bytes" << endl;
 	fin.seekg(0, fin.beg);
 
@@ -90,6 +90,9 @@ void img::imread(string in_name)
 	fin.read((char*)&imp_col, 4);
 
 	data = new char[(real_size - offset)];
+	palette = new char[(offset - 54)];
+
+	fin.read(palette, (offset - 54));
 	fin.read(data, (real_size - offset));
 
 	loaded = true;
@@ -147,11 +150,18 @@ void img::imwrie(string out_name)
 	fout.close();
 }
 
-void img::bilinear(img& store, string mode)
+void img::bilinear(img& store, bool is_up)
 {
-	int	step, num_pix, count;
-	
-	
+	int	new_width, new_height;
+
+	if (is_up){
+		new_width = int(width* 1.5);
+		new_height = int(height* 1.5);
+	}
+	else{
+		new_width = int(width/ 1.5);
+		new_height = int(height/ 1.5);
+	}
 
 	//these parameters in resized image the same as origin one.
 	store.id[0] = id[0];
@@ -166,19 +176,40 @@ void img::bilinear(img& store, string mode)
 	store.v_res = v_res;
 	store.use_col = use_col;
 	store.imp_col = imp_col;
-
 	//these parameter in resized image change as size.
-	//store.data_size = (num_pix* pix_bit) / 4;
+	store.data_size = (width* height* pix_bit) / 4;
 	store.file_size = store.data_size + store.header_size;
 	store.loaded = true;
 	store.real_size = store.file_size;	
-	store.data = new char[data_size];
+	store.data = new char[store.data_size];
+
+	int step, x00, x01, x10, x11, y00, y01, y10, y11;
+	double cor_x, cor_y;
+	step = pix_bit / 8;
+	for (int y = 0; y < new_height; ++y){
+		for (int x = 0; x < new_width; ++x){
+			
+			if (is_up){
+				cor_x = (double)x / 1.5;
+				cor_y = (double)y / 1.5;
+			}
+			else{
+				cor_x = (double)x * 1.5;
+				cor_y = (double)y * 1.5;
+			}
+
+			x00 = int(cor_x);
+			y00 = int(cor_y);
+			
+
+		}
+	}
 
 }
 
 void img::quant(int level)
 {
-	for (int i = 0; i < data_size; ++i){
+	for (unsigned int i = 0; i < data_size; ++i){
 		data[i] = data[i] >> level;
 		data[i] = data[i] << level;
 	}
@@ -189,9 +220,9 @@ int main()
 	
 	img input, resize;
 
-	input.imread("input1.bmp");
-	input.quant(5);
-	input.imwrie("output1_3.bmp");
+	input.imread("input2.bmp");
+	//input.quant(5);
+	input.imwrie("output2.bmp");
 	
 
 

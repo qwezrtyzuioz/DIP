@@ -49,22 +49,48 @@ private:
 
 };
 
-img::img()
-	:loaded(false){}
-img::img(string in_name)
-	: loaded(false)
+int main()
 {
+	
+	img input, resize;
+
+	input.imread("input2.bmp");
+	//input.quant(5);
+	input.bilinear(resize, true);
+	//input.imwrie("output2.bmp");
+	resize.imwrie("test.bmp");
+
+	system("PAUSE");
+}
+
+
+img::img()
+	:loaded(false){}	//	Note the image is empty
+img::img(string in_name)
+	: loaded(true)
+{
+	// ------------------------------------------------------------------------------
+	//   File reading
+	// ------------------------------------------------------------------------------
 	imread(in_name);
 }
 img::~img()
 {
+	// ------------------------------------------------------------------------------
+	//   Data Deloaction
+	// ------------------------------------------------------------------------------
+
 	if (loaded)
 		delete[] data;
 }
 
 void img::imread(string in_name)
 {
-	
+
+	// ------------------------------------------------------------------------------
+	//   File opening
+	// ------------------------------------------------------------------------------
+
 	ifstream fin;
 	fin.open(in_name, ios::in | ios::binary);
 
@@ -72,7 +98,14 @@ void img::imread(string in_name)
 		cout << "ERROR!! Image Doesn't Exist Can't be Loaded!! " << endl;
 		return;
 	}
-		
+
+	// ------------------------------------------------------------------------------
+	//   File reading
+	// ------------------------------------------------------------------------------
+	/*
+	* Using seekg function analysis the size of file first. Then read these
+	* parameters in turn ( mind the order ).
+	*/
 
 	fin.seekg(0, fin.end);
 	real_size = (unsigned int)fin.tellg();
@@ -95,14 +128,20 @@ void img::imread(string in_name)
 	fin.read((char*)&use_col, 4);
 	fin.read((char*)&imp_col, 4);
 
+	//	The size of data and palette depends. Using dynamic allocation. 
 	data = new char[(real_size - offset) + 2 * width * pix_bit / 8];
 	palette = new char[(offset - 54)];
 
 	fin.read(palette, (offset - 54));
 	fin.read(data, (real_size - offset));
 
+	//	Note the image is no longer a empty image. Then close the file
 	loaded = true;
 	fin.close();
+
+	// ------------------------------------------------------------------------------
+	//	Information Printing
+	// ------------------------------------------------------------------------------
 
 	cout << endl;
 	cout << " Bitmap File Header:" << endl;
@@ -128,10 +167,21 @@ void img::imread(string in_name)
 
 void img::imwrie(string out_name)
 {
+	// ------------------------------------------------------------------------------
+	//   Checking
+	// ------------------------------------------------------------------------------
+
 	if (!loaded){
 		cout << "ERROR!! Empty Image Can't be Writen!!" << endl;
 		return;
 	}
+
+	// ------------------------------------------------------------------------------
+	//   File writing
+	// ------------------------------------------------------------------------------
+	/*
+	 * Open a file in binary methond. Then wirte these parameters in turn.
+	 */
 
 	ofstream fout;
 	fout.open(out_name, ios::out | ios::binary);
@@ -153,7 +203,7 @@ void img::imwrie(string out_name)
 	fout.write((char*)&imp_col, 4);
 	fout.write((char*)&palette, offset - 54);
 	fout.write((char*)data, data_size);
-	
+
 	fout.close();
 }
 
@@ -168,11 +218,12 @@ void img::bilinear(img& store, bool is_up)
 
 	if (is_up){
 		new_width = int(width* 1.5);
+		new_width = (new_width / 4) * 4;
 		new_height = int(height* 1.5);
 	}
 	else{
-		new_width = int(width/ 1.5);
-		new_height = int(height/ 1.5);
+		new_width = int(width / 1.5);
+		new_height = int(height / 1.5);
 	}
 
 	//these parameters in resized image the same as origin one.
@@ -197,20 +248,20 @@ void img::bilinear(img& store, bool is_up)
 	store.data_size = (store.width* store.height* store.pix_bit) / 8;
 	store.file_size = store.data_size + store.offset;
 	store.loaded = true;
-	store.real_size = store.file_size;	
-	store.data = new char[store.data_size];
-	
+	store.real_size = store.file_size;
+	store.data = new char[store.data_size + 2* store.pix_bit* store.width/ 8];
 
-	int 
+
+	int
 		step,
 		qx, qy;
 
 	unsigned int
 		r1[4], r2[4], inp[4],
-		pos, 
+		pos,
 		pos1, pos2;
 
-	double 
+	double
 		a, b,
 		cor_x, cor_y;
 
@@ -218,7 +269,7 @@ void img::bilinear(img& store, bool is_up)
 
 	for (int y = 0; y < new_height; ++y){
 		for (int x = 0; x < new_width; ++x){
-			
+
 			if (is_up){
 				cor_x = (double)x / 1.5;
 				cor_y = (double)y / 1.5;
@@ -230,31 +281,37 @@ void img::bilinear(img& store, bool is_up)
 
 			qx = (int)cor_x;
 			qy = (int)cor_y;
-
-			pos1 = qx + qy* width;
-			pos2 = (qx + 1) + qy* width;
-			a = abs(qx - cor_x);
+			
+			//	caculate the real position of reference points to r1
+			pos1 = (qx + qy* width)* step;
+			pos2 = ((qx + 1) + qy* width)* step;
+			//	caculate the ratio of distance from r1 to both reference points
+			a = abs(cor_x - qx);
 			b = abs(1 - a);
+			//	intopolate the r1 according to the reference points and the ratio
 			for (int i = 0; i < step; ++i){
-				r1[i] = a* data[pos2 * step + i] + b* data[pos1 * step + i];
+				r1[i] = int(a* (double)data[pos2 + i] + b* (double)data[pos1 + i]);
 			}
-			pos1 = qx + (qy + 1)* width;
-			pos2 = (qx + 1) + (qy + 1)*width;
+
+			//	caculate the real position of reference points to r2
+			pos1 = (qx + (qy + 1)* width)* step;
+			pos2 = ((qx + 1) + (qy + 1)*width)* step;
+			//	the ratio to both reference points the same as r1
+			//	intopolate the r1 according to the reference points and the ratio
 			for (int i = 0; i < step; ++i){
-				r2[i] = a* data[pos2 * step + i] + b* data[pos1 * step + i];
+				r2[i] = int(a* (double)data[pos2 + i] + b* (double)data[pos1 + i]);
 			}
-			a = abs(qy - cor_y);
-			b = (1 - a);
+
+			a = abs(cor_y - qy);
+			b = abs(1 - a);
 			for (int i = 0; i < step; ++i){
 				inp[i] = a* r2[i] + b* r1[i];
 			}
 			for (int i = 0; i < step; ++i){
 				pos = (x + y* store.width) * step;
 				store.data[pos + i] = inp[i];
-
-				
 			}
-
+			
 		}
 	}
 
@@ -262,14 +319,10 @@ void img::bilinear(img& store, bool is_up)
 
 void img::quant(int level)
 {
-	
+
 	// ------------------------------------------------------------------------------
 	//   Checking
 	// ------------------------------------------------------------------------------
-	/*
-	 * Check the image that call quant function is empty or not.
-	 */
-
 
 	if (!loaded){
 		cout << "ERROR!! Empty Image Can't be Quantize" << endl;
@@ -280,37 +333,13 @@ void img::quant(int level)
 	//   Quantize Function
 	// ------------------------------------------------------------------------------
 	/*
-	 * Shift the data store in bmp to right then to lefe. This operation will 
-	 * discard unsignificant bit and turn them to zero.
-	 * The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
-	 */
+	* Shift the data store in bmp to right then to lefe. This operation will
+	* discard unsignificant bit and turn them to zero.
+	* The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
+	*/
 
 	for (unsigned int i = 0; i < data_size; ++i){
 		data[i] = data[i] >> level;
 		data[i] = data[i] << level;
 	}
-}
-
-int main()
-{
-	
-	img input, resize;
-
-	input.imread("test.bmp");
-	//input.quant(5);
-	//input.bilinear(resize, false);
-	//input.imwrie("output2.bmp");
-	//resize.imwrie("test.bmp");
-
-
-
-
-
-
-
-
-
-
-
-	system("PAUSE");
 }

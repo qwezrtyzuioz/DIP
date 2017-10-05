@@ -68,6 +68,12 @@ void img::imread(string in_name)
 	ifstream fin;
 	fin.open(in_name, ios::in | ios::binary);
 
+	if (!fin.is_open()){
+		cout << "ERROR!! Image Doesn't Exist Can't be Loaded!! " << endl;
+		return;
+	}
+		
+
 	fin.seekg(0, fin.end);
 	real_size = (unsigned int)fin.tellg();
 	cout << "The size of image is: " << real_size << " bytes" << endl;
@@ -123,7 +129,7 @@ void img::imread(string in_name)
 void img::imwrie(string out_name)
 {
 	if (!loaded){
-		cout << "ERROR!! this image is empty" << endl;
+		cout << "ERROR!! Empty Image Can't be Writen!!" << endl;
 		return;
 	}
 
@@ -145,14 +151,20 @@ void img::imwrie(string out_name)
 	fout.write((char*)&v_res, 4);
 	fout.write((char*)&use_col, 4);
 	fout.write((char*)&imp_col, 4);
-	fout.write((char*)data, data_size);
 	fout.write((char*)&palette, offset - 54);
+	fout.write((char*)data, data_size);
+	
 	fout.close();
 }
 
 void img::bilinear(img& store, bool is_up)
 {
 	int	new_width, new_height;
+
+	if (!loaded){
+		cout << "ERROR!! Empty Image Can't be Resize!!" << endl;
+		return;
+	}
 
 	if (is_up){
 		new_width = int(width* 1.5);
@@ -176,21 +188,25 @@ void img::bilinear(img& store, bool is_up)
 	store.v_res = v_res;
 	store.use_col = use_col;
 	store.imp_col = imp_col;
+	store.palette = new char[(offset - 54)];
+	for (int i = 0; i < offset - 54; ++i)
+		store.palette[i] = palette[i];
 	//these parameter in resized image change as size.
-	store.data_size = (new_width* new_height* pix_bit) / 4;
-	store.file_size = store.data_size + store.header_size;
 	store.width = new_width;
 	store.height = new_height;
+	store.data_size = (store.width* store.height* store.pix_bit) / 8;
+	store.file_size = store.data_size + store.offset;
 	store.loaded = true;
 	store.real_size = store.file_size;	
-	store.data = new char[store.data_size + 2 * width];
+	store.data = new char[store.data_size];
+	
 
 	int 
 		step,
 		qx, qy;
 
 	unsigned int
-		r1[3], r2[3], inp[3],
+		r1[4], r2[4], inp[4],
 		pos, 
 		pos1, pos2;
 
@@ -216,24 +232,24 @@ void img::bilinear(img& store, bool is_up)
 			qy = (int)cor_y;
 
 			pos1 = qx + qy* width;
-			pos2 = (qx + 1) + qy*width;
+			pos2 = (qx + 1) + qy* width;
 			a = abs(qx - cor_x);
 			b = abs(1 - a);
-			for (int i = 0; i < 3; ++i){
-				r1[i] = a* data[pos2 * 3 + i] + b* data[pos1 * 3 + i];
+			for (int i = 0; i < step; ++i){
+				r1[i] = a* data[pos2 * step + i] + b* data[pos1 * step + i];
 			}
 			pos1 = qx + (qy + 1)* width;
 			pos2 = (qx + 1) + (qy + 1)*width;
-			for (int i = 0; i < 3; ++i){
-				r2[i] = a* data[pos2 * 3 + i] + b* data[pos1 * 3 + i];
+			for (int i = 0; i < step; ++i){
+				r2[i] = a* data[pos2 * step + i] + b* data[pos1 * step + i];
 			}
 			a = abs(qy - cor_y);
 			b = (1 - a);
-			for (int i = 0; i < 3; ++i){
+			for (int i = 0; i < step; ++i){
 				inp[i] = a* r2[i] + b* r1[i];
 			}
-			for (int i = 0; i < 3; ++i){
-				pos = (x + y* store.width) * 3;
+			for (int i = 0; i < step; ++i){
+				pos = (x + y* store.width) * step;
 				store.data[pos + i] = inp[i];
 
 				
@@ -246,6 +262,29 @@ void img::bilinear(img& store, bool is_up)
 
 void img::quant(int level)
 {
+	
+	// ------------------------------------------------------------------------------
+	//   Checking
+	// ------------------------------------------------------------------------------
+	/*
+	 * Check the image that call quant function is empty or not.
+	 */
+
+
+	if (!loaded){
+		cout << "ERROR!! Empty Image Can't be Quantize" << endl;
+		return;
+	}
+
+	// ------------------------------------------------------------------------------
+	//   Quantize Function
+	// ------------------------------------------------------------------------------
+	/*
+	 * Shift the data store in bmp to right then to lefe. This operation will 
+	 * discard unsignificant bit and turn them to zero.
+	 * The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
+	 */
+
 	for (unsigned int i = 0; i < data_size; ++i){
 		data[i] = data[i] >> level;
 		data[i] = data[i] << level;
@@ -257,11 +296,11 @@ int main()
 	
 	img input, resize;
 
-	input.imread("input2.bmp");
+	input.imread("test.bmp");
 	//input.quant(5);
-	input.bilinear(resize, true);
+	//input.bilinear(resize, false);
 	//input.imwrie("output2.bmp");
-	resize.imwrie("ourput2_up.bmp");
+	//resize.imwrie("test.bmp");
 
 
 

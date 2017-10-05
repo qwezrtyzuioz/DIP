@@ -89,7 +89,7 @@ void img::imread(string in_name)
 	fin.read((char*)&use_col, 4);
 	fin.read((char*)&imp_col, 4);
 
-	data = new char[(real_size - offset)];
+	data = new char[(real_size - offset) + 2 * width * pix_bit / 8];
 	palette = new char[(offset - 54)];
 
 	fin.read(palette, (offset - 54));
@@ -177,15 +177,29 @@ void img::bilinear(img& store, bool is_up)
 	store.use_col = use_col;
 	store.imp_col = imp_col;
 	//these parameter in resized image change as size.
-	store.data_size = (width* height* pix_bit) / 4;
+	store.data_size = (new_width* new_height* pix_bit) / 4;
 	store.file_size = store.data_size + store.header_size;
+	store.width = new_width;
+	store.height = new_height;
 	store.loaded = true;
 	store.real_size = store.file_size;	
-	store.data = new char[store.data_size];
+	store.data = new char[store.data_size + 2 * width];
 
-	int step, x00, x01, x10, x11, y00, y01, y10, y11;
-	double cor_x, cor_y;
+	int 
+		step,
+		qx, qy;
+
+	unsigned int
+		r1[3], r2[3], inp[3],
+		pos, 
+		pos1, pos2;
+
+	double 
+		a, b,
+		cor_x, cor_y;
+
 	step = pix_bit / 8;
+
 	for (int y = 0; y < new_height; ++y){
 		for (int x = 0; x < new_width; ++x){
 			
@@ -198,9 +212,32 @@ void img::bilinear(img& store, bool is_up)
 				cor_y = (double)y * 1.5;
 			}
 
-			x00 = int(cor_x);
-			y00 = int(cor_y);
-			
+			qx = (int)cor_x;
+			qy = (int)cor_y;
+
+			pos1 = qx + qy* width;
+			pos2 = (qx + 1) + qy*width;
+			a = abs(qx - cor_x);
+			b = abs(1 - a);
+			for (int i = 0; i < 3; ++i){
+				r1[i] = a* data[pos2 * 3 + i] + b* data[pos1 * 3 + i];
+			}
+			pos1 = qx + (qy + 1)* width;
+			pos2 = (qx + 1) + (qy + 1)*width;
+			for (int i = 0; i < 3; ++i){
+				r2[i] = a* data[pos2 * 3 + i] + b* data[pos1 * 3 + i];
+			}
+			a = abs(qy - cor_y);
+			b = (1 - a);
+			for (int i = 0; i < 3; ++i){
+				inp[i] = a* r2[i] + b* r1[i];
+			}
+			for (int i = 0; i < 3; ++i){
+				pos = (x + y* store.width) * 3;
+				store.data[pos + i] = inp[i];
+
+				
+			}
 
 		}
 	}
@@ -222,8 +259,9 @@ int main()
 
 	input.imread("input2.bmp");
 	//input.quant(5);
-	input.imwrie("output2.bmp");
-	
+	input.bilinear(resize, true);
+	//input.imwrie("output2.bmp");
+	resize.imwrie("ourput2_up.bmp");
 
 
 

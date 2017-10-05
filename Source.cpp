@@ -54,9 +54,9 @@ int main()
 	
 	img input, resize;
 
-	input.imread("input2.bmp");
+	input.imread("input1.bmp");
 	//input.quant(5);
-	input.bilinear(resize, true);
+	input.bilinear(resize, false);
 	//input.imwrie("output2.bmp");
 	resize.imwrie("test.bmp");
 
@@ -254,10 +254,10 @@ void img::bilinear(img& store, bool is_up)
 
 	int
 		step,
+		r1[4], r2[4], inp[4],
 		qx, qy;
 
 	unsigned int
-		r1[4], r2[4], inp[4],
 		pos,
 		pos1, pos2;
 
@@ -288,9 +288,10 @@ void img::bilinear(img& store, bool is_up)
 			//	caculate the ratio of distance from r1 to both reference points
 			a = abs(cor_x - qx);
 			b = abs(1 - a);
+
 			//	intopolate the r1 according to the reference points and the ratio
 			for (int i = 0; i < step; ++i){
-				r1[i] = int(a* (double)data[pos2 + i] + b* (double)data[pos1 + i]);
+				r1[i] = int(a* (unsigned char)data[pos2 + i] + b* (unsigned char)data[pos1 + i]);
 			}
 
 			//	caculate the real position of reference points to r2
@@ -299,17 +300,18 @@ void img::bilinear(img& store, bool is_up)
 			//	the ratio to both reference points the same as r1
 			//	intopolate the r1 according to the reference points and the ratio
 			for (int i = 0; i < step; ++i){
-				r2[i] = int(a* (double)data[pos2 + i] + b* (double)data[pos1 + i]);
+				r2[i] = int(a* (unsigned char)data[pos2 + i] + b* (unsigned char)data[pos1 + i]);
 			}
 
 			a = abs(cor_y - qy);
 			b = abs(1 - a);
 			for (int i = 0; i < step; ++i){
-				inp[i] = a* r2[i] + b* r1[i];
+				inp[i] = a* (double)r2[i] + b* (double)r1[i];
 			}
 			for (int i = 0; i < step; ++i){
 				pos = (x + y* store.width) * step;
 				store.data[pos + i] = inp[i];
+				if (inp[i]<0) cout << inp[i] << endl;
 			}
 			
 		}

@@ -1,7 +1,7 @@
 /**
  * @file img.h
  *
- * @brief img class definition
+ * @ brief img class definition
  *
  * Class that representing the real bmp file in real world.
  * Providing basic read, wirte and advance function such as

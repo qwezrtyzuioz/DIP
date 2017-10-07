@@ -1,3 +1,16 @@
+/**
+ * @ file img.cpp
+ *
+ * @ member function definition of img class
+ *
+ * Define constructor, distructor.
+ * Define function that import external image into img class.
+ * Define function that export img to external image.
+ * Define function that create img with another size
+ * Define function that quantize img data inside every pixel.
+ *
+ */
+
 #include "img.h"
 #include <fstream>
 #include <iostream>
@@ -5,8 +18,25 @@
 #include <string>
 
 
+
+// ------------------------------------------------------------------------------
+//   Constructor
+// ------------------------------------------------------------------------------
+/*
+ * Default constructor 
+ * Note that img class created by this constructor will be empty initially.
+ */
+
 img::img()
 	:loaded(false){}	//	Note the image is empty
+
+// ------------------------------------------------------------------------------
+//   Constructor
+// ------------------------------------------------------------------------------
+/*
+ * Constructor that will import external image to img class.
+ */
+
 img::img(string in_name)
 	: loaded(true)
 {
@@ -15,6 +45,14 @@ img::img(string in_name)
 	// ------------------------------------------------------------------------------
 	imread(in_name);
 }
+
+// ------------------------------------------------------------------------------
+//   Destructor
+// ------------------------------------------------------------------------------
+/*
+ * Free the memory that was dynamic allocated.  
+ */
+
 img::~img()
 {
 	// ------------------------------------------------------------------------------
@@ -24,6 +62,15 @@ img::~img()
 	if (loaded)
 		delete[] data;
 }
+
+// ------------------------------------------------------------------------------
+//   Image reading
+// ------------------------------------------------------------------------------
+/*
+ * Check file_name exist or not.
+ * Analsis the real size of file.
+ * Read header and data of bmp.
+ */
 
 void img::imread(string in_name)
 {
@@ -40,13 +87,6 @@ void img::imread(string in_name)
 		return;
 	}
 
-	// ------------------------------------------------------------------------------
-	//   File reading
-	// ------------------------------------------------------------------------------
-	/*
-	* Using seekg function analysis the size of file first. Then read these
-	* parameters in turn ( mind the order ).
-	*/
 
 	fin.seekg(0, fin.end);
 	real_size = (unsigned int)fin.tellg();
@@ -106,6 +146,14 @@ void img::imread(string in_name)
 
 }
 
+// ------------------------------------------------------------------------------
+//   Image writting
+// ------------------------------------------------------------------------------
+/*
+ * Check file_name exist or not.
+ * Write header and data of bmp.
+ */
+
 void img::imwrie(string out_name)
 {
 	// ------------------------------------------------------------------------------
@@ -148,27 +196,60 @@ void img::imwrie(string out_name)
 	fout.close();
 }
 
+// ------------------------------------------------------------------------------
+//   Bilinear resize
+// ------------------------------------------------------------------------------
+/*
+ * 1. Check orgin and output img is illegal or not
+ * 2. Envalue the target size of new image
+ * 3. Fill the header of new image base on target size
+ * 4. Declare parameters should be used
+ * 5. For each pixel on new image
+ *		1. Envalue the corresponding point
+ *		2. Interpolate once make r1, r2
+ *		3. Interpolate twice make final value
+ *		4. Write final value back to new image
+ */
+
 void img::bilinear(img& store, bool is_up)
 {
-	int	new_width, new_height;
+	int	new_width, new_height;	//	width and height after resize
+
+	// ------------------------------------------------------------------------------
+	//   Checking
+	// ------------------------------------------------------------------------------
 
 	if (!loaded){
 		cout << "ERROR!! Empty Image Can't be Resize!!" << endl;
 		return;
 	}
+	if (!store.loaded){
+		cout << "ERROR!! The output object is not empty" << endl;
+		return;
+	}
+
+	// ------------------------------------------------------------------------------
+	//	Envalue the destination
+	// ------------------------------------------------------------------------------
 
 	if (is_up){
 		new_width = int(width* 1.5);
 		new_height = int(height* 1.5);
 		new_width = (new_width / 4) * 4;
+		//	Note that a width of a bmp image must be the multiple of 4.
 	}
 	else{
 		new_width = int(width / 1.5);
 		new_height = int(height / 1.5);
 		new_width = (new_width / 4) * 4;
+		//	Note that a width of a bmp image must be the multiple of 4.
 	}
 
-	//these parameters in resized image the same as origin one.
+	// ------------------------------------------------------------------------------
+	//	Header filling
+	// ------------------------------------------------------------------------------
+
+	//	these parameters in resized image the same as origin one.
 	store.id[0] = id[0];
 	store.id[1] = id[1];
 	store.reserved = reserved;
@@ -184,7 +265,7 @@ void img::bilinear(img& store, bool is_up)
 	store.palette = new char[(offset - 54)];
 	for (unsigned int i = 0; i < offset - 54; ++i)
 		store.palette[i] = palette[i];
-	//these parameter in resized image change as size.
+	//	these parameter in resized image change as size.
 	store.width = new_width;
 	store.height = new_height;
 	store.data_size = (store.width* store.height* store.pix_bit) / 8;
@@ -193,25 +274,32 @@ void img::bilinear(img& store, bool is_up)
 	store.real_size = store.file_size;
 	store.data = new char[store.data_size + 2 * store.pix_bit* store.width / 8];
 
+	// ------------------------------------------------------------------------------
+	//	Parameters declaration
+	// ------------------------------------------------------------------------------
 
 	int
-		step,
-		r1[4], r2[4], inp[4],
-		qx, qy;
+		step,						//	shows how many byte express a pixel
+		r1[4], r2[4], inp[4],		//	r1 and r2 are values caculated after first interpolation
+		qx, qy;						//	the down left integer point
 
 	unsigned int
-		pos,
-		pos1, pos2;
+		pos, pos1, pos2;			//	used to store the real position convert from a coordinate to data array
 
 	double
-		a, b,
-		cor_x, cor_y;
+		a, b,						//	distance from the point we want to interpolate to both reference points
+		cor_x, cor_y;				//	corresponding point form pixel on resized image mapping to original one
 
 	step = pix_bit / 8;
 
-	for (int y = 0; y < new_height; ++y){
+	// ------------------------------------------------------------------------------
+	//	Interpolation
+	// ------------------------------------------------------------------------------
+
+	for (int y = 0; y < new_height; ++y){	//	for each pixel on resized image
 		for (int x = 0; x < new_width; ++x){
 
+			//	envalue the position of corresponding point.
 			if (is_up){
 				cor_x = (double)x / 1.5;
 				cor_y = (double)y / 1.5;
@@ -221,10 +309,11 @@ void img::bilinear(img& store, bool is_up)
 				cor_y = (double)y * 1.5;
 			}
 
+			//	envalue the corresponding points
 			qx = (int)cor_x;
 			qy = (int)cor_y;
 
-			//	caculate the real position of reference points to r1
+			//	envalue the real position of reference points to r1
 			pos1 = (qx + qy* width)* step;
 			pos2 = ((qx + 1) + qy* width)* step;
 			//	caculate the ratio of distance from r1 to both reference points
@@ -245,11 +334,15 @@ void img::bilinear(img& store, bool is_up)
 				r2[i] = int(a* (unsigned char)data[pos2 + i] + b* (unsigned char)data[pos1 + i]);
 			}
 
+			//	caculate the ratio of distance from corresponding point to both reference points r1 r2
 			a = abs(cor_y - qy);
 			b = abs(1 - a);
+			//	intopolate the corresponding point according to the r1 r2 and the ratio
 			for (int i = 0; i < step; ++i){
 				inp[i] = a* (double)r2[i] + b* (double)r1[i];
 			}
+
+			//	Write back to output object
 			for (int i = 0; i < step; ++i){
 				pos = (x + y* store.width) * step;
 				store.data[pos + i] = inp[i];
@@ -260,6 +353,15 @@ void img::bilinear(img& store, bool is_up)
 	}
 
 }
+
+// ------------------------------------------------------------------------------
+//   Quantize Function
+// ------------------------------------------------------------------------------
+/*
+ * Shift the data store in bmp to right then to lefe. This operation will
+ * discard unsignificant bit and turn them to zero.
+ * The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
+ */
 
 void img::quant(int level)
 {
@@ -274,13 +376,8 @@ void img::quant(int level)
 	}
 
 	// ------------------------------------------------------------------------------
-	//   Quantize Function
+	//   Quantization
 	// ------------------------------------------------------------------------------
-	/*
-	* Shift the data store in bmp to right then to lefe. This operation will
-	* discard unsignificant bit and turn them to zero.
-	* The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
-	*/
 
 	for (unsigned int i = 0; i < data_size; ++i){
 		data[i] = data[i] >> level;

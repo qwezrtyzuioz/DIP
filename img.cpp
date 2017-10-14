@@ -1,21 +1,22 @@
 /**
- * @ file img.cpp
- *
- * @ member function definition of img class
- *
- * Define constructor, distructor.
- * Define function that import external image into img class.
- * Define function that export img to external image.
- * Define function that create img with another size
- * Define function that quantize img data inside every pixel.
- *
- */
+* @ file img.cpp
+*
+* @ member function definition of img class
+*
+* Define constructor, distructor.
+* Define function that import external image into img class.
+* Define function that export img to external image.
+* Define function that create img with another size
+* Define function that quantize img data inside every pixel.
+*
+*/
 
 #include "img.h"
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <cmath>
 
 
 
@@ -23,9 +24,9 @@
 //   Constructor
 // ------------------------------------------------------------------------------
 /*
- * Default constructor 
- * Note that img class created by this constructor will be empty initially.
- */
+* Default constructor
+* Note that img class created by this constructor will be empty initially.
+*/
 
 img::img()
 	:loaded(false){}	//	Note the image is empty
@@ -34,8 +35,8 @@ img::img()
 //   Constructor
 // ------------------------------------------------------------------------------
 /*
- * Constructor that will import external image to img class.
- */
+* Constructor that will import external image to img class.
+*/
 
 img::img(string in_name)
 	: loaded(true)
@@ -50,8 +51,8 @@ img::img(string in_name)
 //   Destructor
 // ------------------------------------------------------------------------------
 /*
- * Free the memory that was dynamic allocated.  
- */
+* Free the memory that was dynamic allocated.
+*/
 
 img::~img()
 {
@@ -67,10 +68,10 @@ img::~img()
 //   Image reading
 // ------------------------------------------------------------------------------
 /*
- * Check file_name exist or not.
- * Analsis the real size of file.
- * Read header and data of bmp.
- */
+* Check file_name exist or not.
+* Analsis the real size of file.
+* Read header and data of bmp.
+*/
 
 void img::imread(string in_name)
 {
@@ -80,7 +81,7 @@ void img::imread(string in_name)
 	// ------------------------------------------------------------------------------
 
 	ifstream fin;
-	fin.open(in_name, ios::in | ios::binary);
+	fin.open(in_name.c_str(), ios::in | ios::binary);
 
 	if (!fin.is_open()){
 		cout << "ERROR!! Image Doesn't Exist Can't be Loaded!! " << endl;
@@ -150,9 +151,9 @@ void img::imread(string in_name)
 //   Image writting
 // ------------------------------------------------------------------------------
 /*
- * Check file_name exist or not.
- * Write header and data of bmp.
- */
+* Check file_name exist or not.
+* Write header and data of bmp.
+*/
 
 void img::imwrie(string out_name)
 {
@@ -173,7 +174,7 @@ void img::imwrie(string out_name)
 	*/
 
 	ofstream fout;
-	fout.open(out_name, ios::out | ios::binary);
+	fout.open(out_name.c_str(), ios::out | ios::binary);
 
 	fout.write(id, 2);
 	fout.write((char*)&file_size, 4);
@@ -200,16 +201,16 @@ void img::imwrie(string out_name)
 //   Bilinear resize
 // ------------------------------------------------------------------------------
 /*
- * 1. Check orgin and output img is illegal or not
- * 2. Envalue the target size of new image
- * 3. Fill the header of new image base on target size
- * 4. Declare parameters should be used
- * 5. For each pixel on new image
- *		1. Envalue the corresponding point
- *		2. Interpolate once make r1, r2
- *		3. Interpolate twice make final value
- *		4. Write final value back to new image
- */
+* 1. Check orgin and output img is illegal or not
+* 2. Envalue the target size of new image
+* 3. Fill the header of new image base on target size
+* 4. Declare parameters should be used
+* 5. For each pixel on new image
+*		1. Envalue the corresponding point
+*		2. Interpolate once make r1, r2
+*		3. Interpolate twice make final value
+*		4. Write final value back to new image
+*/
 
 void img::bilinear(img& store, bool is_up)
 {
@@ -223,7 +224,7 @@ void img::bilinear(img& store, bool is_up)
 		cout << "ERROR!! Empty Image Can't be Resize!!" << endl;
 		return;
 	}
-	if (!store.loaded){
+	if (store.loaded){
 		cout << "ERROR!! The output object is not empty" << endl;
 		return;
 	}
@@ -358,10 +359,10 @@ void img::bilinear(img& store, bool is_up)
 //   Quantize Function
 // ------------------------------------------------------------------------------
 /*
- * Shift the data store in bmp to right then to lefe. This operation will
- * discard unsignificant bit and turn them to zero.
- * The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
- */
+* Shift the data store in bmp to right then to lefe. This operation will
+* discard unsignificant bit and turn them to zero.
+* The level is the compress ratio. 1 is no Compress, 7 is Thresholding.
+*/
 
 void img::quant(int level)
 {

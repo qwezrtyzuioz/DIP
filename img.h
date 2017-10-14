@@ -1,13 +1,13 @@
 /**
- * @file img.h
- *
- * @ brief img class definition
- *
- * Class that representing the real bmp file in real world.
- * Providing basic read, wirte and advance function such as
- * quantization and bilinear resize.
- *
- */
+* @file img.h
+*
+* @ brief img class definition
+*
+* Class that representing the real bmp file in real world.
+* Providing basic read, wirte and advance function such as
+* quantization and bilinear resize.
+*
+*/
 
 #ifndef IMG_H_
 #define IMG_H_

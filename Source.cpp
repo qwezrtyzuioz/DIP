@@ -5,10 +5,10 @@ using namespace std;
 
 int main()
 {
-	
+
 	img input, resize;
 
-	input.imread("output2_down.bmp");
+	input.imread("input2.bmp");
 	//input.quant(5);
 	input.bilinear(resize, false);
 	//input.imwrie("output2.bmp");
@@ -16,4 +16,3 @@ int main()
 
 	system("PAUSE");
 }
-

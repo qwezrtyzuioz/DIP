@@ -155,7 +155,7 @@ void img::imread(string in_name)
 * Write header and data of bmp.
 */
 
-void img::imwrie(string out_name)
+void img::imwrite(string out_name)
 {
 	// ------------------------------------------------------------------------------
 	//   Checking

@@ -26,7 +26,7 @@ public:
 
 	bool loaded;								//	indicator shows img is empty or not
 	void imread(string in_name);				//	image reading
-	void imwrie(string out_name);				//	image export to file
+	void imwrite(string out_name);				//	image export to file
 	void bilinear(img& store, bool is_up);		//	bilinear resize
 	void quant(int level);						//	qunatization
 
